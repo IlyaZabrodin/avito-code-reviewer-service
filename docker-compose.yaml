@@ -1,0 +1,50 @@
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: pr-reviewer-db
+    environment:
+      POSTGRES_DB: code_review_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pr-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d code_review_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pr-reviewer-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: code_review_db
+      APP_ADDRESS: 0.0.0.0
+      APP_PORT: 8080
+      MIGRATIONS_PATH: /app/migrations
+    networks:
+      - pr-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  pr-network:
+    driver: bridge
