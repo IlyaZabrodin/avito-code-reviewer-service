@@ -110,7 +110,7 @@ func (ctrl *TeamController) sendNotFoundResponse(w http.ResponseWriter) {
 
 func (ctrl *TeamController) sendConflictResponse(w http.ResponseWriter, message string) {
 	ctrl.sendJSONResponse(w, models.Error{
-		Code:    "TEAM_EXISTS",
+		Code:    "CONFLICT",
 		Message: message,
-	}, http.StatusBadRequest)
+	}, http.StatusConflict)
 }

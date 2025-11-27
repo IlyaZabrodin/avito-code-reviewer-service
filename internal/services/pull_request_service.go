@@ -10,14 +10,12 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	defaultReviewersCount = 2
-)
+const defaultReviewersCount = 2
 
 type PullRequestService struct {
-	prRepository  *repository.PullRequestRepository
+	prRepository   *repository.PullRequestRepository
 	userRepository *repository.UserRepository
-	randomizer    *rand.Rand
+	randomizer     *rand.Rand
 }
 
 func NewPullRequestService(
@@ -25,9 +23,10 @@ func NewPullRequestService(
 	userRepository *repository.UserRepository,
 ) *PullRequestService {
 	return &PullRequestService{
-		prRepository:  prRepository,
+		prRepository:   prRepository,
 		userRepository: userRepository,
-		randomizer:    rand.New(rand.NewSource(time.Now().UnixNano())),
+		//nolint:gosec // math/rand достаточно для балансировки нагрузки
+		randomizer: rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -52,7 +51,7 @@ func (s *PullRequestService) Create(pr *models.PullRequest) (*models.PullRequest
 
 	assignedReviewers := s.selectRandomReviewers(teamMembers, defaultReviewersCount, pr.PullRequestID)
 
-	newPR := &models.PullRequest{
+	newPR := models.PullRequest{
 		PullRequestID:     pr.PullRequestID,
 		PullRequestName:   pr.PullRequestName,
 		AuthorID:          pr.AuthorID,
@@ -60,7 +59,7 @@ func (s *PullRequestService) Create(pr *models.PullRequest) (*models.PullRequest
 		AssignedReviewers: assignedReviewers,
 	}
 
-	if err := s.createPRInTransaction(newPR); err != nil {
+	if err := s.createPRInTransaction(&newPR); err != nil {
 		return nil, err
 	}
 
@@ -74,8 +73,9 @@ func (s *PullRequestService) Merge(prID string) (*models.PullRequest, error) {
 
 	pr, err := s.prRepository.FindByID(prID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, models.ErrNotFound
+		return nil, models.ErrPullRequestNotFound
 	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -102,14 +102,15 @@ func (s *PullRequestService) Reassign(prID string, oldUserID string) (*models.Pu
 
 	pr, err := s.prRepository.FindByIDWithReviewers(prID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, "", models.ErrNotFound
+		return nil, "", models.ErrPullRequestNotFound
 	}
+
 	if err != nil {
 		return nil, "", err
 	}
 
 	if pr.Status == "MERGED" {
-		return nil, "", models.ErrPRAlreadyMerged
+		return nil, "", models.ErrPullRequestAlreadyMerged
 	}
 
 	if err := s.validateReviewerAssigned(pr, oldUserID); err != nil {
@@ -118,8 +119,9 @@ func (s *PullRequestService) Reassign(prID string, oldUserID string) (*models.Pu
 
 	oldReviewer, err := s.userRepository.FindByID(oldUserID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, "", models.ErrNotFound
+		return nil, "", models.ErrPullRequestNotFound
 	}
+
 	if err != nil {
 		return nil, "", err
 	}
@@ -141,28 +143,33 @@ func (s *PullRequestService) validatePullRequestInput(pr *models.PullRequest) er
 	if pr == nil {
 		return errors.New("pull request cannot be nil")
 	}
+
 	if pr.PullRequestID == "" {
 		return errors.New("pull_request_id cannot be empty")
 	}
+
 	return nil
 }
 
 func (s *PullRequestService) checkPRNotExists(prID string) error {
 	_, err := s.prRepository.FindByID(prID)
 	if err == nil {
-		return models.ErrPRAlreadyExists
+		return models.ErrPullRequestAlreadyExists
 	}
+
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
+
 	return nil
 }
 
 func (s *PullRequestService) validateAuthor(authorID string) (*models.User, error) {
 	author, err := s.userRepository.FindActiveByID(authorID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, models.ErrAuthorNotFound
+		return nil, models.ErrAuthorNotFoundOrInactive
 	}
+
 	return author, err
 }
 
@@ -176,9 +183,11 @@ func (s *PullRequestService) validateReassignInput(prID, oldUserID string) error
 	if prID == "" {
 		return errors.New("pull_request_id cannot be empty")
 	}
+
 	if oldUserID == "" {
 		return errors.New("old_user_id cannot be empty")
 	}
+
 	return nil
 }
 
@@ -188,7 +197,8 @@ func (s *PullRequestService) validateReviewerAssigned(pr *models.PullRequest, ol
 			return nil
 		}
 	}
-	return models.ErrUserIsNotAssignedToPR
+
+	return models.ErrReviewerNotAssigned
 }
 
 func (s *PullRequestService) performReassignment(
@@ -203,12 +213,13 @@ func (s *PullRequestService) performReassignment(
 		excludeUserIDs,
 		pr.AuthorID,
 	)
+
 	if err != nil {
 		return "", err
 	}
 
 	if len(availableReviewers) == 0 {
-		return "", models.ErrNoReplacement
+		return "", models.ErrNoReplacementFound
 	}
 
 	newReviewer := availableReviewers[s.randomizer.Intn(len(availableReviewers))]
@@ -235,6 +246,7 @@ func (s *PullRequestService) extractReviewerIDs(reviewers []models.PullRequestRe
 	for i, reviewer := range reviewers {
 		ids[i] = reviewer.UserID
 	}
+
 	return ids
 }
 
@@ -268,8 +280,10 @@ func (s *PullRequestService) selectRandomReviewers(
 func (s *PullRequestService) shuffleUsers(users []models.User) []models.User {
 	shuffled := make([]models.User, len(users))
 	copy(shuffled, users)
+
 	s.randomizer.Shuffle(len(shuffled), func(i, j int) {
 		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	})
+
 	return shuffled
 }

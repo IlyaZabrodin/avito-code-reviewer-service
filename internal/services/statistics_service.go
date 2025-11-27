@@ -31,7 +31,7 @@ func (s *StatisticsService) GetAssignmentsStats(teamName string) ([]models.Assig
 		stats := models.AssignmentStats{
 			UserID:          user.UserID,
 			Username:        user.Username,
-			AssignedReviews: assignedReviews,
+			AssignedReviews: int(assignedReviews),
 		}
 		assignmentStats = append(assignmentStats, stats)
 	}

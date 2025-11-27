@@ -1,7 +1,7 @@
 package models
 
-type AssignmentStats struct {
-	UserID          string `json:"user_id"`
-	Username        string `json:"username"`
-	AssignedReviews int64  `json:"assigned_reviews"`
+type UserStatistics struct {
+	UserID           string `json:"userId"`
+	Username        string `json:"userName"`
+	AssignedReviews  int    `json:"assignedReviews"`
 }

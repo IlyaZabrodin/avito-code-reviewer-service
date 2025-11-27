@@ -105,7 +105,7 @@ func (s *TeamService) validateTeamInput(team *models.Team) error {
 func (s *TeamService) checkTeamNotExists(teamName string) error {
 	_, err := s.teamRepository.FindByName(teamName)
 	if err == nil {
-		return errors.New("team already exists")
+		return models.ErrTeamAlreadyExists
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err

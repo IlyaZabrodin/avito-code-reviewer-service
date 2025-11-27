@@ -54,9 +54,7 @@ func InitApplication() *Application {
 }
 
 func (app *Application) Run() error {
-	if err := app.initializeDependencies(); err != nil {
-		return fmt.Errorf("failed to initialize dependencies: %w", err)
-	}
+	app.initializeDependencies()
 
 	if err := app.start(); err != nil {
 		return fmt.Errorf("failed to start application: %w", err)
@@ -73,7 +71,7 @@ func (app *Application) Run() error {
 	return nil
 }
 
-func (app *Application) initializeDependencies() error {
+func (app *Application) initializeDependencies() {
 	app.logger.Info("Initializing application dependencies...")
 
 	if err := godotenv.Load(); err != nil {
@@ -85,8 +83,6 @@ func (app *Application) initializeDependencies() error {
 
 	app.dependencies.server = controllers.NewHTTPServer(app.logger, db, config.address, config.port)
 	app.logger.Info("Dependencies initialized successfully", "address", config.address, "port", config.port)
-
-	return nil
 }
 
 type serverConfig struct {

@@ -36,13 +36,13 @@ func (ctrl *PullRequestController) CreatePR(w http.ResponseWriter, r *http.Reque
 		Status:          "OPEN",
 	})
 
-	if errors.Is(err, models.ErrPRAlreadyExists) {
+	if errors.Is(err, models.ErrPullRequestAlreadyExists) {
 		ctrl.logger.Error("PR already exists", "prID", req.PullRequestID)
 		ctrl.sendConflictResponse(w, "PR_EXISTS", "PR id already exists")
 		return
 	}
 
-	if errors.Is(err, models.ErrAuthorNotFound) {
+	if errors.Is(err, models.ErrAuthorNotFoundOrInactive) {
 		ctrl.logger.Error("Author or team not found", "authorID", req.AuthorID)
 		ctrl.sendNotFoundResponse(w)
 		return
@@ -68,7 +68,8 @@ func (ctrl *PullRequestController) MergePR(w http.ResponseWriter, r *http.Reques
 	}
 
 	pr, err := ctrl.service.Merge(req.PullRequestID)
-	if errors.Is(err, models.ErrNotFound) {
+
+	if errors.Is(err, models.ErrPullRequestNotFound) {
 		ctrl.logger.Error("PR not found for merge", "prID", req.PullRequestID)
 		ctrl.sendNotFoundResponse(w)
 		return
@@ -96,25 +97,25 @@ func (ctrl *PullRequestController) ReassignPR(w http.ResponseWriter, r *http.Req
 
 	pr, newUserID, err := ctrl.service.Reassign(req.PullRequestID, req.OldReviewerID)
 
-	if errors.Is(err, models.ErrPRAlreadyMerged) {
+	if errors.Is(err, models.ErrPullRequestAlreadyMerged) {
 		ctrl.logger.Error("Cannot reassign merged PR", "prID", req.PullRequestID)
 		ctrl.sendConflictResponse(w, "PR_MERGED", "cannot reassign on merged PR")
 		return
 	}
 
-	if errors.Is(err, models.ErrUserIsNotAssignedToPR) {
+	if errors.Is(err, models.ErrReviewerNotAssigned) {
 		ctrl.logger.Error("Reviewer not assigned to PR", "prID", req.PullRequestID, "reviewerID", req.OldReviewerID)
 		ctrl.sendConflictResponse(w, "NOT_ASSIGNED", "reviewer not assigned to this PR")
 		return
 	}
 
-	if errors.Is(err, models.ErrNotFound) {
+	if errors.Is(err, models.ErrPullRequestNotFound) {
 		ctrl.logger.Error("PR or author not found", "prID", req.PullRequestID)
 		ctrl.sendNotFoundResponse(w)
 		return
 	}
 
-	if errors.Is(err, models.ErrNoReplacement) {
+	if errors.Is(err, models.ErrNoReplacementFound) {
 		ctrl.logger.Error("No replacement found for reviewer")
 		ctrl.sendNotFoundResponse(w)
 		return
@@ -135,7 +136,6 @@ func (ctrl *PullRequestController) ReassignPR(w http.ResponseWriter, r *http.Req
 func (ctrl *PullRequestController) sendJSONResponse(w http.ResponseWriter, data interface{}, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		ctrl.logger.Error("Failed to encode JSON response", "error", err)
 	}
@@ -161,4 +161,3 @@ func (ctrl *PullRequestController) sendConflictResponse(w http.ResponseWriter, c
 		Message: message,
 	}, http.StatusConflict)
 }
-

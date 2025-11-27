@@ -3,14 +3,14 @@ package models
 import "time"
 
 type PullRequestDTO struct {
-	PullRequestID     string   `json:"pull_request_id"`
-	PullRequestName   string   `json:"pull_request_name"`
-	AuthorID          string   `json:"author_id"`
+	PullRequestID     string   `json:"pullRequestId"`
+	PullRequestName   string   `json:"pullRequestName"`
+	AuthorID          string   `json:"authorId"`
 	Status            string   `json:"status"`
-	AssignedReviewers []string `json:"assigned_reviewers,omitempty"`
+	AssignedReviewers []string `json:"assignedReviewers,omitempty"`
 }
 
-func (pr PullRequest) ToResponse() PullRequestDTO {
+func (pr *PullRequest) ToResponse() PullRequestDTO {
 	reviewerIDs := make([]string, len(pr.AssignedReviewers))
 	for i, reviewer := range pr.AssignedReviewers {
 		reviewerIDs[i] = reviewer.UserID
@@ -26,17 +26,17 @@ func (pr PullRequest) ToResponse() PullRequestDTO {
 }
 
 type ResponseCreatePR struct {
-	PullRequest PullRequestDTO `json:"pr"`
+	PullRequest PullRequestDTO `json:"pullRequest"`
 }
 
 type ResponseMerge struct {
-	PullRequest PullRequestDTO `json:"pr"`
-	MergedAT    time.Time      `json:"merged_at"`
+	PullRequest PullRequestDTO `json:"pullRequest"`
+	MergedAT    time.Time      `json:"mergedAt"`
 }
 
 type ResponseReassign struct {
-	PullRequest PullRequestDTO `json:"pr"`
-	ReplacedBy  string         `json:"replaced_by"`
+	PullRequest PullRequestDTO `json:"pullRequest"`
+	ReplacedBy  string         `json:"replacedBy"`
 }
 
 type ResponseAddTeam struct {

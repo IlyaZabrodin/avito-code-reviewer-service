@@ -3,12 +3,13 @@ package models
 import "errors"
 
 var (
-	ErrPRAlreadyExists       = errors.New("PR already exists")
-	ErrAuthorNotFound        = errors.New("author not found or inactive")
-	ErrNotFound              = errors.New("PR not found")
-	ErrPRAlreadyMerged       = errors.New("PR already merged")
-	ErrUserIsNotAssignedToPR = errors.New("PR is not assigned to a user")
-	ErrNoReplacement         = errors.New("no replacement found")
+	ErrPullRequestAlreadyExists = errors.New("PULL REQUEST ALREADY EXISTS")
+	ErrAuthorNotFoundOrInactive = errors.New("AUTHOR NOT FOUND OR INACTIVE")
+	ErrPullRequestNotFound      = errors.New("PULL REQUEST NOT FOUND")
+	ErrPullRequestAlreadyMerged = errors.New("PULL REQUEST ALREADY MERGED")
+	ErrReviewerNotAssigned      = errors.New("REVIEWER IS NOT ASSIGNED TO PULL REQUEST")
+	ErrNoReplacementFound       = errors.New("NO REPLACEMENT REVIEWER FOUND")
+	ErrTeamAlreadyExists        = errors.New("TEAM ALREADY EXISTS")
 )
 
 type Error struct {
